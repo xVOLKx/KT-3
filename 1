@@ -1,0 +1,61 @@
+SOAP-клиент:
+
+import json
+from zeep import Client
+
+# Создаем клиент для веб-службы ЦБ РФ
+client = Client('https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx?WSDL')
+
+# Вызываем операцию getValutes
+response = client.service.EnumValutesXML(False)
+
+# Преобразуем XML-ответ в JSON
+data = client.wsdl.to_dict(response)
+json_data = json.dumps(data['EnumValutesXMLResult']['EnumValutesXML'])
+
+# Выводим результат
+print(json_data)
+SOAP-сервер:
+
+from zeep import Client
+from zeep import xsd
+
+# Создаем сервер SOAP
+server = xsd.SoapServer()
+
+# Загружаем WSDL-схему ЦБ РФ
+wsdl = 'https://www.cbr.ru/DailyInfoWebServ/DailyInfo.asmx?WSDL'
+server.load_wsdl(wsdl)
+
+# Определяем операцию getValutes
+@server.soap_operation('GetCursOnDateXML')
+def get_valutes(request):
+    # Получаем текущую дату
+    on_date = request['On_date']
+    
+    # Создаем клиент для веб-службы ЦБ РФ
+    client = Client(wsdl)
+    
+    # Вызываем операцию GetCursOnDateXML
+    response = client.service.GetCursOnDateXML(on_date)
+    
+    return response
+
+# Определяем операцию getValute
+@server.soap_operation('GetCursDynamicXML')
+def get_valute(request):
+    # Получаем параметры вызова
+    from_date = request['FromDate']
+    to_date = request['ToDate']
+    valuta_code = request['ValutaCode']
+    
+    # Создаем клиент для веб-службы ЦБ РФ
+    client = Client(wsdl)
+    
+    # Вызываем операцию GetCursDynamicXML
+    response = client.service.GetCursDynamicXML(from_date, to_date, valuta_code)
+    
+    return response
+
+# Запускаем сервер на порту 8000
+server.serve('0.0.0.0', 8000)
